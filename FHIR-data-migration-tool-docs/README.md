@@ -74,6 +74,8 @@ During the deployment of the FHIR data migration tool, the following components 
    
 6. Configure [$import](https://learn.microsoft.com/azure/healthcare-apis/fhir/configure-import-data) on the destination FHIR instance (Azure Health Data Service FHIR service server) with the same storage account as the import location, and set import mode to incremental mode.
 
+7. Review advanced prerequisites and AHDS preparation (as applicable)
+	- Before you proceed with deployment, review and complete any steps in the [**Extra prerequisites needed (advanced scenarios)**](/FHIR-data-migration-tool-docs/README.md#extra-prerequisites-needed-advanced-scenarios) section and the [**Prepare Azure Health Data Services FHIR Service**](/FHIR-data-migration-tool-docs/README.md#prepare-azure-health-data-services-fhir-service) section if they apply to your environment.
 
 > [!IMPORTANT]  
 > Please ensure that your $import is set to **incremental import mode** in order for the migration tool to work. If needed, you may switch back to initial import mode post-migration. Set incremental import mode following these [configuration settings](https://learn.microsoft.com/en-us/azure/healthcare-apis/fhir/configure-import-data#step-3b-set-import-configuration-for-incremental-import-mode) and [parameter value](https://learn.microsoft.com/en-us/azure/healthcare-apis/fhir/import-data#body). Learn more about incremental and initial import [here](https://learn.microsoft.com/en-us/azure/healthcare-apis/fhir/import-data).
