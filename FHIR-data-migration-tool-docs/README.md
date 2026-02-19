@@ -86,16 +86,6 @@ You may have certain advanced scenarios surrounding your migration that may requ
 ### Private Link
 - If you are using Azure Private Link, please follow separate instructions in this Github for [deploying the migration tool with Azure Private Link](/FHIR-data-migration-tool-docs/private-link-sample/ReadMe.md).
 
-### Custom search parameters
-- If you have custom search parameters that need to be migrated over, please note the following:
-	- The FHIR Migration Tool will copy over custom search parameters from your Azure API for FHIR over to your Azure Health Data Services FHIR service at the very beginning of migration. 
-	- Once migration has started, if you wish to add any more custom search parameters after that, you must add them directly to the Azure Health Data Service FHIR service post-migration.
-	-  Once all your custom search parameters are in Azure Health Data Service FHIR service (regardless of if they were added by the migration tool or manually), you will need to run $reindex post-migration in order to index the custom search parameters and be able to use them in live production.
-	- Learn more about custom search parameters:
-	[How to do custom search in FHIR service](https://learn.microsoft.com/en-us/azure/healthcare-apis/fhir/how-to-do-custom-search) 
-	and $reindex:
-	[How to run a reindex job in FHIR service](https://learn.microsoft.com/en-us/azure/healthcare-apis/fhir/how-to-run-a-reindex).
-
 ### De-identified export
 - If you need to systemmatically edit or transform your data during the migration process, we have an option to include a step in migration that calls the [Tools for Health Data Anonymization](https://learn.microsoft.com/en-us/azure/healthcare-apis/azure-api-for-fhir/de-identified-export), which is a tool that can help de-identify data, to do those transformations after exporting from Azure API for FHIR and before importing into Azure Health Data Services FHIR Service.
 - An example of when this might be needed is if you have resources with decimal values that are more than 18 digits. The [FHIR spec](https://www.hl7.org/fhir/datatypes.html#decimal) is headed in the direction to limit the length of decimal values to 18 digits, and Azure Health Data Services only supports up to 18 digits of precision for decimal data type. Azure API for FHIR did not have this restriction on precision. If you have data of decimal data type that has more than 18 digits that you are trying to migrate, $import may reject those values, and you may say a 500 Internal Server Error. To avoid this, you may use the De-id option in the migration tool to edit the data by truncating down to 18 digits to meet the restriction.
@@ -141,6 +131,32 @@ You may have certain advanced scenarios surrounding your migration that may requ
 	7. Follow the deployment instructions in the section for ["Deploy Migration Tool"](/FHIR-data-migration-tool-docs/README.md#extra-prerequisites-needed-advanced-scenarios), making sure to turn on the migration tool option for [Export with de-identified data](/FHIR-data-migration-tool-docs/README.md#export-with-de-identified-data).
 
 
+## Prepare Azure Health Data Services FHIR Service
+Before deploying the migration tool, ensure that your destination Azure Health Data Services FHIR service is properly prepared and optimized for data import. This preparation phase is critical for migration success and data integrity.
+
+### Prerequisites for AHDS Preparation
+1. **Implementation Guide (IG) Deployment**
+   - If your organization uses specific FHIR profiles (such as US Core Implementation Guide), ensure that the required profiles and associated search parameters are loaded into your Azure Health Data Services FHIR service prior to migration.
+   - Search parameters defined in the IG will be automatically available once the IG is loaded. This step must be completed before running the reindex operation.
+
+2. **Reindex Operation**
+   - After loading the Implementation Guide and all associated search parameters, run a $reindex operation on your Azure Health Data Services FHIR service.
+   - Allow the reindex operation to complete fully before proceeding to the next step. The duration of this operation depends on the number of search parameters being indexed.
+   - Monitor the reindex progress through the Azure Portal or Azure Health Data Services FHIR service API to ensure completion.
+   - Refer to [How to run a reindex job in FHIR service](https://learn.microsoft.com/en-us/azure/healthcare-apis/fhir/how-to-run-a-reindex) for detailed instructions.
+
+3. **Custom Search Parameter Migration** (if applicable)
+   - If you have custom search parameters defined in your source Azure API for FHIR server that are not part of a standard IG, run the [Search Parameter Migration](https://github.com/Azure-Samples/azure-health-data-and-ai-samples/tree/main/samples/lift-shift) script before deploying the migration tool.
+  
+   - This script will automatically:
+     - Retrieve custom search parameters from your source Azure API for FHIR server
+     - Create equivalent search parameters in your Azure Health Data Services FHIR service
+     - Trigger a $reindex operation on the destination service to index the newly created search parameters
+	 
+   - Do not proceed to the migration tool deployment until this script has completed successfully and the reindex operation has finished.
+
+> [!NOTE]
+> The custom search parameter migration script handles reindexing automatically, so you do not need to manually run $reindex again after executing the script. However, ensure that the script's reindex operation completes before starting the migration tool deployment.
 
 # 3. Deploy Migration Tool
 ## Deploy the migration tool
