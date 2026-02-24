@@ -13,7 +13,7 @@ The API for FHIR migration tool is an [Azure durable function](https://learn.mic
 >
 >The migration tool GitHub is intended only for use in migrating data. It is not intended for use as a medical device or to perform any analysis or any medical function and the performance of the software for such purposes has not been established. You bear sole responsibility for any use of this software, including incorporation into any product intended for a medical purpose.
 >
->As the user, you are responsible for monitoring the progress of the migration and export and import output process, and for ensuring that all data has been successfully migrated before decommissioning the source FHIR server. You can monitor the progress of the migration and each export and import job through the dashboard. More information on the dashboard can be found in the [Monitoring during migration](https://github.com/Azure/apiforfhir-migration-tool/tree/main/FHIR-data-migration-tool-docs#monitoring-during-migration) document.
+>As the user, you are responsible for testing the migration in lower environments first before migrating in production environments, monitoring the progress of the migration and export and import output process, and for ensuring that all data has been successfully migrated before decommissioning the source FHIR server. You can monitor the progress of the migration and each export and import job through the dashboard. More information on the dashboard can be found in the [Monitoring during migration](https://github.com/Azure/apiforfhir-migration-tool/tree/main/FHIR-data-migration-tool-docs#monitoring-during-migration) document.
 
 
 ### FHIR Data Migration Tool Overview
