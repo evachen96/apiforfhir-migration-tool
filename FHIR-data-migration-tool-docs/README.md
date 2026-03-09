@@ -85,6 +85,11 @@ During the deployment of the FHIR data migration tool, the following components 
 ## Extra prerequisites needed (advanced scenarios)
 You may have certain advanced scenarios surrounding your migration that may require more configuration or steps. We have listed a few of these scenarios below with instructions. If you have other scenarios that are not listed here, please submit a Github issue and we can take a look for consideration!
 
+### Microsoft Defender
+- If you have Microsoft Defender for Cloud enabled on your subscription, particularly Defender for Storage turned on along with Malware scanning, you may experience increased costs during the migration due to malware scanning on the upload data to Azure storage during the migration. After consulting with your security team, if you wish to reduce Defender costs, you can choose to make the following changes at your own risk:
+  - Exclude blobs that you do not want to ahve malware scanning done for: Temporarily exclude blob where data is being migrated for the duration of the migration.
+  - Temporarily disable Defender for Storage on the subscription that you are running the migration on for the duration of the migration.
+  
 ### Private Link
 - If you are using Azure Private Link, please follow separate instructions in this Github for [deploying the migration tool with Azure Private Link](/FHIR-data-migration-tool-docs/private-link-sample/ReadMe.md).
 
