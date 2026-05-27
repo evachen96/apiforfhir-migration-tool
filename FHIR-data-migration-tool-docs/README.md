@@ -13,7 +13,7 @@ The API for FHIR migration tool is an [Azure durable function](https://learn.mic
 >
 >The migration tool GitHub is intended only for use in migrating data. It is not intended for use as a medical device or to perform any analysis or any medical function and the performance of the software for such purposes has not been established. You bear sole responsibility for any use of this software, including incorporation into any product intended for a medical purpose.
 >
->As the user, you are responsible for monitoring the progress of the migration and export and import output process, and for ensuring that all data has been successfully migrated before decommissioning the source FHIR server. You can monitor the progress of the migration and each export and import job through the dashboard. More information on the dashboard can be found in the [Monitoring during migration](https://github.com/Azure/apiforfhir-migration-tool/tree/main/FHIR-data-migration-tool-docs#monitoring-during-migration) document.
+>As the user, you are responsible for testing the migration in lower environments first before migrating in production environments, monitoring the progress of the migration and export and import output process, and for ensuring that all data has been successfully migrated before decommissioning the source FHIR server. You can monitor the progress of the migration and each export and import job through the dashboard. More information on the dashboard can be found in the [Monitoring during migration](https://github.com/Azure/apiforfhir-migration-tool/tree/main/FHIR-data-migration-tool-docs#monitoring-during-migration) document.
 
 
 ### FHIR Data Migration Tool Overview
@@ -74,6 +74,8 @@ During the deployment of the FHIR data migration tool, the following components 
    
 6. Configure [$import](https://learn.microsoft.com/azure/healthcare-apis/fhir/configure-import-data) on the destination FHIR instance (Azure Health Data Service FHIR service server) with the same storage account as the import location, and set import mode to incremental mode.
 
+7. Review advanced prerequisites and AHDS preparation (as applicable)
+	- Before you proceed with deployment, review and complete any steps in the [**Extra prerequisites needed (advanced scenarios)**](/FHIR-data-migration-tool-docs/README.md#extra-prerequisites-needed-advanced-scenarios) section and the [**Prepare Azure Health Data Services FHIR Service**](/FHIR-data-migration-tool-docs/README.md#prepare-azure-health-data-services-fhir-service) section if they apply to your environment.
 
 > [!IMPORTANT]  
 > Please ensure that your $import is set to **incremental import mode** in order for the migration tool to work. If needed, you may switch back to initial import mode post-migration. Set incremental import mode following these [configuration settings](https://learn.microsoft.com/en-us/azure/healthcare-apis/fhir/configure-import-data#step-3b-set-import-configuration-for-incremental-import-mode) and [parameter value](https://learn.microsoft.com/en-us/azure/healthcare-apis/fhir/import-data#body). Learn more about incremental and initial import [here](https://learn.microsoft.com/en-us/azure/healthcare-apis/fhir/import-data).
@@ -86,18 +88,13 @@ During the deployment of the FHIR data migration tool, the following components 
 ## Extra prerequisites needed (advanced scenarios)
 You may have certain advanced scenarios surrounding your migration that may require more configuration or steps. We have listed a few of these scenarios below with instructions. If you have other scenarios that are not listed here, please submit a Github issue and we can take a look for consideration!
 
+### Microsoft Defender
+- If you have Microsoft Defender for Cloud enabled on your subscription, particularly Defender for Storage turned on along with Malware scanning, you may experience increased costs during the migration due to malware scanning on the upload data to Azure storage during the migration. After consulting with your security team, if you wish to reduce Defender costs, you can choose to make the following changes at your own risk:
+  - Exclude blobs that you do not want to ahve malware scanning done for: Temporarily exclude blob where data is being migrated for the duration of the migration.
+  - Temporarily disable Defender for Storage on the subscription that you are running the migration on for the duration of the migration.
+  
 ### Private Link
 - If you are using Azure Private Link, please follow separate instructions in this Github for [deploying the migration tool with Azure Private Link](/FHIR-data-migration-tool-docs/private-link-sample/ReadMe.md).
-
-### Custom search parameters
-- If you have custom search parameters that need to be migrated over, please note the following:
-	- The FHIR Migration Tool will copy over custom search parameters from your Azure API for FHIR over to your Azure Health Data Services FHIR service at the very beginning of migration. 
-	- Once migration has started, if you wish to add any more custom search parameters after that, you must add them directly to the Azure Health Data Service FHIR service post-migration.
-	-  Once all your custom search parameters are in Azure Health Data Service FHIR service (regardless of if they were added by the migration tool or manually), you will need to run $reindex post-migration in order to index the custom search parameters and be able to use them in live production.
-	- Learn more about custom search parameters:
-	[How to do custom search in FHIR service](https://learn.microsoft.com/en-us/azure/healthcare-apis/fhir/how-to-do-custom-search) 
-	and $reindex:
-	[How to run a reindex job in FHIR service](https://learn.microsoft.com/en-us/azure/healthcare-apis/fhir/how-to-run-a-reindex).
 
 ### De-identified export
 - If you need to systemmatically edit or transform your data during the migration process, we have an option to include a step in migration that calls the [Tools for Health Data Anonymization](https://learn.microsoft.com/en-us/azure/healthcare-apis/azure-api-for-fhir/de-identified-export), which is a tool that can help de-identify data, to do those transformations after exporting from Azure API for FHIR and before importing into Azure Health Data Services FHIR Service.
@@ -144,6 +141,32 @@ You may have certain advanced scenarios surrounding your migration that may requ
 	7. Follow the deployment instructions in the section for ["Deploy Migration Tool"](/FHIR-data-migration-tool-docs/README.md#extra-prerequisites-needed-advanced-scenarios), making sure to turn on the migration tool option for [Export with de-identified data](/FHIR-data-migration-tool-docs/README.md#export-with-de-identified-data).
 
 
+## Prepare Azure Health Data Services FHIR Service
+Before deploying the migration tool, ensure that your destination Azure Health Data Services FHIR service is properly prepared and optimized for data import. This preparation phase is critical for migration success and data integrity.
+
+### Prerequisites for AHDS Preparation
+1. **Implementation Guide (IG) Deployment**
+   - If your organization uses specific FHIR profiles (such as US Core Implementation Guide), ensure that the required profiles and associated search parameters are loaded into your Azure Health Data Services FHIR service prior to migration.
+   - Search parameters defined in the IG will be automatically available once the IG is loaded. This step must be completed before running the reindex operation.
+
+2. **Reindex Operation**
+   - After loading the Implementation Guide and all associated search parameters, run a $reindex operation on your Azure Health Data Services FHIR service.
+   - Allow the reindex operation to complete fully before proceeding to the next step. The duration of this operation depends on the number of search parameters being indexed.
+   - Monitor the reindex progress through the Azure Portal or Azure Health Data Services FHIR service API to ensure completion.
+   - Refer to [How to run a reindex job in FHIR service](https://learn.microsoft.com/en-us/azure/healthcare-apis/fhir/how-to-run-a-reindex) for detailed instructions.
+
+3. **Custom Search Parameter Migration** (if applicable)
+   - If you have custom search parameters defined in your source Azure API for FHIR server that are not part of a standard IG, run the [Search Parameter Migration](https://github.com/Azure-Samples/azure-health-data-and-ai-samples/tree/main/samples/lift-shift) script before deploying the migration tool.
+  
+   - This script will automatically:
+     - Retrieve custom search parameters from your source Azure API for FHIR server
+     - Create equivalent search parameters in your Azure Health Data Services FHIR service
+     - Trigger a $reindex operation on the destination service to index the newly created search parameters
+	 
+   - Do not proceed to the migration tool deployment until this script has completed successfully and the reindex operation has finished.
+
+> [!NOTE]
+> The custom search parameter migration script handles reindexing automatically, so you do not need to manually run $reindex again after executing the script. However, ensure that the script's reindex operation completes before starting the migration tool deployment.
 
 # 3. Deploy Migration Tool
 ## Deploy the migration tool
@@ -237,14 +260,40 @@ The following are optional settings that you can configure during deployment.
 
 ### Scheduling of Migration.
 The data migration tool provides an option to schedule migration runs. By default, after deployment, the tool runs every hour. <br> 
-You can customize the migration schedule by updating the __MigrationStarterCron__ parameter to meet your specific requirements.
+You can customize the migration schedule by updating the __MigrationStarterCron__ parameter to meet your specific requirements.This parameter follows the six-field cron format used by Azure Functions:
+```
+{second} {minute} {hour} {day} {month} {day-of-week}
+```
 
-Example:
+#### Default Configuration (Runs Every Hour):
 
 ```
 Name: MigrationStarterCron
 Value: 0 0 * * * *
+```
+Explanation:
 
+- 0 → Second (runs at second 0)
+
+- 0 → Minute (runs at minute 0)
+
+- \* → Hour (every hour)
+
+- \* → Day of month (every day)
+
+- \* → Month (every month)
+
+- \* → Day of week (every day of the week)
+
+#### Common Customization Examples<br>
+
+Run every 15 minutes
+```
+0 */15 * * * *
+```
+Run every 30 minutes
+```
+0 */30 * * * *
 ```
 
 ### Type of Migration.
@@ -506,6 +555,92 @@ Name: AZURE_MaxCountValue
 Value: 5000
 
 ```
+
+#### How to configure MaxExportRetries for export/import
+1. After deploying, open the Data migration Azure function.
+2. Go to the environment variable setting and under it go to App Setting.
+3. Set the below configuration as per the need:
+```
+Name: AZURE_MaxExportRetriesEnabled
+Value: true or false
+
+Name: AZURE_MaxExportRetries
+Value: <<Int number>>
+
+```
+
+**Configuration:**
+
+![MaxExportRetries Configuration](images/MaxExportRetries-Configuration.png)
+
+AZURE_MaxExportRetriesEnabled can be set to true or false. This parameter allows the migration tool to retry failed export/import operations up to a specified number of times.
+- If set to false, the migration tool will keep retring the failed export/import operations.
+- If set to true, the migration tool will retry failed export/import operations up to the number specified in AZURE_MaxExportRetries.
+
+AZURE_MaxExportRetries will take an integer as value. This sets the maximum number of retry attempts for failed export/import operations. By default, this value is set to 5.
+
+**Consecutive Failure Behavior:**
+
+If an export or import operation fails consecutively for the number of times specified in AZURE_MaxExportRetries (when AZURE_MaxExportRetriesEnabled is set to true), the migration tool will automatically halt the migration process. When this occurs:
+- The migration process will stop to prevent further issues
+- Details of the migration halt will be logged in the logs
+- You will need to investigate the cause of the failures of the export/import by getting the details from the export table under **FailureReason** column for the export/import run and resolve the underlying issue before resuming migration
+
+This safeguard helps prevent continuous failed attempts that could lead to resource exhaustion.
+
+Migration Halt Error:
+
+- Open the Data Migration Azure function and go to MigrationOrchestration function and get the invocation logs for the error.<br>
+
+![MaxExportRetries Error](images/MaxExportRetries-Error.png)
+
+Example:
+
+Below setting in Azure Function will enable export/import retry with a maximum of 3 retry attempts: 
+```
+Name: AZURE_MaxExportRetriesEnabled
+Value: true
+
+Name: AZURE_MaxExportRetries
+Value: 3
+
+```
+
+### How to clear MaxExportRetries counter
+
+After resolving the issues that caused the consecutive failures, you will need to clear the maxExportRetries counter to resume the migration. There are two ways to clear this counter:
+
+**Option 1: Using the ClearMaxExportRetries Function**
+
+The migration tool provides a built-in HTTP function to clear the maxExportRetries counter:
+
+1. Navigate to your Azure Function App in the Azure Portal
+2. Go to "Functions" in the left menu
+3. Find and select the `ClearMaxExportRetries_Http` function
+4. Click on "Get Function Url" and copy the URL
+5. Send a GET or POST request to this URL
+6. The function will clear the maxExportRetries value in the chunk table and return a success message
+
+Example using curl:
+```
+curl -X GET "https://<your-function-app>.azurewebsites.net/api/ClearMaxExportRetries_Http?code=<function-key>"
+```
+![MaxExportRetries Function](images/MaxExportRetries-Function.png)
+
+**Option 2: Manually Clearing from Chunk Table**
+
+You can also manually clear the maxExportRetries counter directly in the storage table:
+
+1. Navigate to the Storage Account linked to your migration tool Function App
+2. Go to "Storage browser" in the left menu
+3. Expand "Tables" and select the chunk table (typically named "chunk")
+4. Locate the `maxExportRetries` column
+5. Edit the value and set it to `0`
+6. Save the changes
+
+![Clear MaxExportRetries](images/Clear-MaxExportRetries.png)
+
+Once the counter is cleared, the migration tool will resume processing the failed chunk in the next scheduled run.
 
 You  can configure the start date in Azure function from where the export should start from the API for FHIR server. AZURE_StartDate will help to export the data from that specific date. <br>
 If the start date is not provided the tool will fetch the first resource date from the server and start the migration.
